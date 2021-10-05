@@ -202,7 +202,7 @@ def plot_confusion_matrixEnd(cm, labels_name, title):
     plt.ylabel('True label')
 import pandas as pd
 if __name__ == '__main__':
-    classes = ['push','double click','pull','rotation','grab']
+    classes = ['push','double click','pull','rotation','grab','release','upDown']
     # f = open('C:/Users/hao/Desktop/6-12 LSTMAndCnn.txt')
     # confusionArray = np.zeros((4, 4))
     # k = 0
@@ -215,11 +215,13 @@ if __name__ == '__main__':
     #     confusionArray[k, 3] = float(data[3][:-1])
     #     k = k + 1
 
-    confusionArray = [[47.0, 0.0,0.0,0.0,0.0],
-                      [0.0, 30.0,0.0,0.0,0.0],
-                      [2.0, 0.0,49.0,0.0,0.0],
-                      [2.0, 0.0,0.0,33.0,0.0],
-                      [0.0, 0.0,0.0,1.0,45.0]]
+    confusionArray = [[65.0,0.0,0.0,0.0,0.0,0.0,0.0],
+                      [0.0,57.0,0.0,0.0,0.0,0.0,0.0],
+                      [0.0,0.0,59.0,0.0,0.0,0.0,0.0],
+                      [0.0,0.0,0.0,50.0,0.0,0.0,1.0],
+                      [0.0,0.0,0.0,0.0,72.0,1.0,0.0],
+                      [0.0,0.0,0.0,1.0,0.0,38.0,0.0],
+                      [0.0,0.0,0.0,0.0,0.0,0.0,68.0]]
 
     confusionArray = np.array(confusionArray)
 

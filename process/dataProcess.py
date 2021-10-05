@@ -10,20 +10,18 @@ import re
 class dataProcess(Dataset):
 
     def __getitem__(self, index: int):
-        path,label = self.datas[index]
+        path, label = self.datas[index]
         pathGyro = self.getGyroFromAudio(path)
         dataGyro = scio.loadmat(pathGyro)
         dataGyro = np.array(dataGyro['dataGyro'])
         dataGyro = torch.FloatTensor(dataGyro)
-
-
 
         data = scio.loadmat(path)
 
         data = np.array(data['x'])
         data = torch.FloatTensor(data)
 
-        return data,dataGyro,label
+        return data, dataGyro, label
 
     def __len__(self) -> int:
         return len(self.datas)
@@ -31,7 +29,7 @@ class dataProcess(Dataset):
     def __init__(self) -> None:
         super().__init__()
         path = Parament.dataPath
-        f = open(path,'r')
+        f = open(path, 'r')
         datas = []
         for line in f.readlines():
             toChange = line.split('-')
@@ -48,14 +46,13 @@ class dataProcess(Dataset):
                 label = 4
             elif label[0:-1] == 'release':
                 label = 5
+            elif label[0:-1] == 'upDown':
+                label = 6
             datas.append((toChange[0], label))
         self.datas = datas
 
-
-    def getGyroFromAudio(self,path):
-        fatherPath = path[0:path.rfind('/')+1]
-        time = re.findall(r'\d+',path)[0]
-        gyroPath = fatherPath+time+"gyro"+".mat"
+    def getGyroFromAudio(self, path):
+        fatherPath = path[0:path.rfind('/') + 1]
+        time = re.findall(r'\d+', path)[0]
+        gyroPath = fatherPath + time + "gyro" + ".mat"
         return gyroPath
-
-
