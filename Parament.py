@@ -1,8 +1,8 @@
 dataPath = "C:/Users/hao/Desktop/save6-2.txt"
 threshold = 8 #抖动极限
 confusionShowStep = 20 #每50步输出混淆矩阵
-batchSize = 64
-epoch = 800
+batchSize = 128
+epoch = 20
 nclass = 7
 splitRatio = 0.7
 lrAttention = 0.005

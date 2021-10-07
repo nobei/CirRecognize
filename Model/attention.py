@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+
 class attention(nn.Module):
 
     def __init__(self) -> None:

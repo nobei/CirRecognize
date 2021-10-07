@@ -1,7 +1,7 @@
 import math
+import random
 
 import torch
-from tensorboardX import SummaryWriter
 
 from torch import optim
 from torch.utils.data.dataloader import DataLoader
@@ -9,15 +9,68 @@ import torch.nn as nn
 
 import numpy as np
 
-from Model.gyroModel import lstmModel
 from Model.mergeModel import mergeModel, softVoteMerge, onlyAudio, onlyGyro
-from process.dataProcess import dataProcess
-from Model.ModelCir import CirModel
-
-import torch.nn.utils.rnn as rnn_utils
+from process.test_data_process import testData
+from process.train_data_process import trainDataProcess
+from Parament import dataPath
 
 from Parament import confusionShowStep, epoch, batchSize, nclass, splitRatio, lrAttention, lrMain
 
+
+def random_splite(radio):
+    path = dataPath
+    f = open(path, 'r')
+    paths = []
+    for line in f.readlines():
+        paths.append(line)
+    train_sample = random.sample(paths, int(radio * len(paths)))
+    test_sample = list(set(paths) - set(train_sample))
+    label1 = 0
+    label2 = 0
+    label3 = 0
+    label4 = 0
+    label5 = 0
+    label6 = 0
+    label7 = 0
+    for line in test_sample:
+        to_change = line.split('-')
+        label = to_change[1]
+        if label[0:-1] == 'push':
+            label1 = label1 + 1
+        elif label[0:-1] == 'double click':
+            label2 = label2 + 1
+        elif label[0:-1] == 'pull':
+            label3 = label3 + 1
+        elif label[0:-1] == 'rotation':
+            label4 = label4 + 1
+        elif label[0:-1] == 'grab':
+            label5 = label5 + 1
+        elif label[0:-1] == 'release':
+            label6 = label6 + 1
+        elif label[0:-1] == 'upDown':
+            label7 = label7 + 1
+    print(str(label1) + " " + str(label2) + " " + str(label3) +
+          " " + str(label4) + " " + str(label5) + " " + str(label6) + " " + str(label7))
+    return train_sample, test_sample
+
+
+def cross_vaild(rate):
+    path = dataPath
+    f = open(path, 'r')
+    paths = []
+    for line in f.readlines():
+        paths.append(line)
+    random.shuffle(paths)
+    res = []
+    dataNum = int(len(paths) / rate);
+    for i in range(rate):
+        if (i + 1) * dataNum >= len(paths):
+            test_sample = paths[i * dataNum:-1]
+        else:
+            test_sample = paths[i * dataNum:(i + 1) * dataNum]
+        train_sample = list(set(paths) - set(test_sample))
+        res.append((train_sample, test_sample))
+    return res
 
 def weight_init(m):
     if isinstance(m, nn.Conv2d):
@@ -120,28 +173,35 @@ def test(dataSet, device, model, loss, drawFlag, epoch, trainError):
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # device = torch.device('cpu')
+    # train_sample, test_sample = random_splite(0.9)
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
-    dataSet = dataProcess()
-    train_size = int(splitRatio * len(dataSet))
-    test_size = len(dataSet) - train_size
-    train_dataset, test_dataset = torch.utils.data.random_split(dataSet, [train_size, test_size])
-    dataLoad = DataLoader(train_dataset, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
-    testLoad = DataLoader(test_dataset, batch_size=1, num_workers=1)
-    # model = cnn()
-    # model = MyModel(2,128,1)
+    # dataSet = dataProcess()
+    # train_size = int(splitRatio * len(dataSet))
+    # test_size = len(dataSet) - train_size
+    # train_dataset, test_dataset = torch.utils.data.random_split(dataSet, [train_size, test_size])
+    # train_dataset = trainDataProcess(train_sample)
+    # test_dataset = testData(test_sample)
+    pathRandom = cross_vaild(9)
+    for train_sample,test_sample in pathRandom:
+        train_dataset = trainDataProcess(train_sample)
+        test_dataset = testData(test_sample)
+        dataLoad = DataLoader(train_dataset, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
+        testLoad = DataLoader(test_dataset, batch_size=1, num_workers=1)
+        # model = cnn()
+        # model = MyModel(2,128,1)
 
-    model = mergeModel()
+        model = mergeModel()
 
-    # model.apply(weight_init)
-    for name, parameters in model.named_parameters():
-        print(name, ':', parameters.size())
+        # model.apply(weight_init)
+        for name, parameters in model.named_parameters():
+            print(name, ':', parameters.size())
 
-    # attentionParam = list(map(id,model.attention.parameters()))
-    # mainParams = filter(lambda p: id(p) not in attentionParam,
-    #                         model.parameters())
+        # attentionParam = list(map(id,model.attention.parameters()))
+        # mainParams = filter(lambda p: id(p) not in attentionParam,
+        #                         model.parameters())
 
-    criteria = torch.nn.CrossEntropyLoss(reduction='mean')
-    # optimizer = optim.Adam([{'params':model.attention.parameters(), 'lr':lrAttention},{'params':mainParams,'lr':lrMain}])
-    optimizer = optim.Adam(model.parameters(), lr=lrMain)
-    train(model, criteria, epoch, dataLoad, device, optimizer, testLoad)
+        criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+        # optimizer = optim.Adam([{'params':model.attention.parameters(), 'lr':lrAttention},{'params':mainParams,'lr':lrMain}])
+        optimizer = optim.Adam(model.parameters(), lr=lrMain)
+        train(model, criteria, epoch, dataLoad, device, optimizer, testLoad)
