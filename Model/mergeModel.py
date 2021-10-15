@@ -81,8 +81,8 @@ class onlyGyro(nn.Module):
 
     def forward(self, input):
         out = self.gyro(input)
-        b, c, h, w = out.size()
+        # b, c, h, w = out.size()
         # out = self.attention(out)
-        out = out.reshape(b, -1)
+        # out = out.reshape(b, -1)
         outClass = self.linear(out)
         return F.log_softmax(outClass, dim=1)

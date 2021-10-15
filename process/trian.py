@@ -9,7 +9,10 @@ import torch.nn as nn
 
 import numpy as np
 
+from Model.ModelCir import CirModel
 from Model.mergeModel import mergeModel, softVoteMerge, onlyAudio, onlyGyro
+from process.cirDataLoad import cirDataLoad
+from process.gyroDataLoad import gyroDataLoad
 from process.test_data_process import testData
 from process.train_data_process import trainDataProcess
 from Parament import dataPath
@@ -143,11 +146,90 @@ def test(dataSet, device, model, loss, drawFlag, epoch, trainError):
     lossAge = 0.0
     correct = 0.0
 
-    for i_batch, (img, gyro, name) in enumerate(dataSet):
+    for i_batch, (img,gyro, name) in enumerate(dataSet):
         img = img.to(device)
         name = name.to(device)
         gyro = gyro.to(device)
         pred = model(img, gyro)
+        # pred = model(gyro)
+        error = loss(pred, name)
+        lossAge += error.item()
+        # zero = torch.zeros_like(name)
+        # one = torch.ones_like(name)
+        _, predEnd = torch.max(pred.data, 1)
+        confustionArray[name, predEnd] += 1
+        correct += (predEnd == name).sum()
+        # correct += torch.where(abs(pred-name)<0.5,one,zero).sum()
+
+    lossAge /= len(dataSet.dataset)
+    lens = len(dataSet.dataset)
+    correct = correct / lens
+    # writer = SummaryWriter('runs/scalar_example/6-20')
+    # writer.add_scalar('Train', trainError, epoch)
+    # writer.add_scalar('test', correct , epoch)
+    if (epoch + 1) % confusionShowStep == 0:
+        confusionDraw(confustionArray)
+        drawFlag[0] = True
+    return lossAge, correct
+
+
+
+def train_gyroOrCir(model, criteria, epoch, train_loader, device, optimizer, test_load):
+    model = model.train()
+    model = model.to(device)
+    drawFlag = [False]
+    # f = open("../Performance/train_loss6-20.txt",'w')
+    # f1 = open("../Performance/acc_6-20.txt",'w')
+    for i in range(epoch):
+        for i_batch, (data, label) in enumerate(train_loader):
+            model.zero_grad()
+            data = data.to(device)
+            label = label.to(device)
+            pred = model(data)
+            # pred = model(dataGyro)
+            cost = criteria(pred, label)
+            # print(model.weight.is_leaf)
+            # model.weight.retain_grad()
+            cost.backward()
+            #           if (i_batch % 10 == 0):
+            #              print(model.test)
+            optimizer.step()
+            if (i_batch % 20 == 0):
+                print('Train Epoch: {}\tLoss: {:.6f}'.format(i, cost.item()))
+                # lossError = cost.item()
+                # f.write(str(lossError))
+                # f.write("\n")
+
+        # if i == 10:
+        #     torch.save(model,'model3.pkl')
+        if (i + 1) % 5 == 0:
+            valLoss, valAcc = test_gyroOrCir(test_load, device, model, criteria, drawFlag, i, cost.item())
+            print('val error:{:.6f}\tval accuray:{:.6f}'.format(valLoss, valAcc))
+            print('\n')
+            # f1.write(str(valAcc))
+            # f1.write("\n")
+
+            for p in model.parameters():
+                p.requires_grad = True
+            model.train()
+
+        # if (i+1)%50 == 0:
+        #     f.close()
+        #     f1.close()
+
+def test_gyroOrCir(dataSet, device, model, loss, drawFlag, epoch, trainError):
+    for p in model.parameters():
+        p.requires_grad = False
+    model.eval()
+    confustionArray = np.zeros([nclass, nclass])
+
+    lossAge = 0.0
+    correct = 0.0
+
+    for i_batch, (gyro, name) in enumerate(dataSet):
+        gyro = gyro.to(device)
+        name = name.to(device)
+        pred = model(gyro)
         # pred = model(gyro)
         error = loss(pred, name)
         lossAge += error.item()
@@ -176,32 +258,85 @@ if __name__ == '__main__':
     # train_sample, test_sample = random_splite(0.9)
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
-    # dataSet = dataProcess()
-    # train_size = int(splitRatio * len(dataSet))
-    # test_size = len(dataSet) - train_size
-    # train_dataset, test_dataset = torch.utils.data.random_split(dataSet, [train_size, test_size])
-    # train_dataset = trainDataProcess(train_sample)
-    # test_dataset = testData(test_sample)
-    pathRandom = cross_vaild(9)
-    for train_sample,test_sample in pathRandom:
-        train_dataset = trainDataProcess(train_sample)
-        test_dataset = testData(test_sample)
-        dataLoad = DataLoader(train_dataset, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
-        testLoad = DataLoader(test_dataset, batch_size=1, num_workers=1)
-        # model = cnn()
-        # model = MyModel(2,128,1)
+    train_sample, test_sample = random_splite(0.1);
+    dataSet = []
+    dataSet.extend(train_sample)
+    dataSet.extend(test_sample)
+    train_size = int(splitRatio * len(dataSet))
+    test_size = len(dataSet) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataSet, [train_size, test_size])
 
-        model = mergeModel()
 
-        # model.apply(weight_init)
-        for name, parameters in model.named_parameters():
-            print(name, ':', parameters.size())
 
-        # attentionParam = list(map(id,model.attention.parameters()))
-        # mainParams = filter(lambda p: id(p) not in attentionParam,
-        #                         model.parameters())
+    # train_set = gyroDataLoad(train_dataset)
+    # test_set = gyroDataLoad(test_dataset)
+    # train = DataLoader(train_set, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
+    # test = DataLoader(test_set)
+    # criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    # model = onlyGyro()
+    # criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    # optimizer = optim.Adam(model.parameters(), lr=lrMain)
+    # train_gyro(model, criteria, epoch, train, device, optimizer, test)
 
-        criteria = torch.nn.CrossEntropyLoss(reduction='mean')
-        # optimizer = optim.Adam([{'params':model.attention.parameters(), 'lr':lrAttention},{'params':mainParams,'lr':lrMain}])
-        optimizer = optim.Adam(model.parameters(), lr=lrMain)
-        train(model, criteria, epoch, dataLoad, device, optimizer, testLoad)
+
+
+    train_set = testData(train_dataset)
+    test_set = testData(test_dataset)
+    trainLoad = DataLoader(train_set, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
+    testLoad = DataLoader(test_set)
+    criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    model = mergeModel()
+    criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    optimizer = optim.Adam(model.parameters(), lr=lrMain)
+    train(model, criteria, epoch, trainLoad, device, optimizer, testLoad)
+
+
+    # train_set = cirDataLoad(train_dataset)
+    # test_set = cirDataLoad(test_dataset)
+    # trainLoad = DataLoader(train_set, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
+    # testLoad = DataLoader(test_set)
+    # criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    # model = onlyAudio()
+    # criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    # optimizer = optim.Adam(model.parameters(), lr=lrMain)
+    # train_gyroOrCir(model, criteria, epoch, trainLoad, device, optimizer, testLoad)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # pathRandom = cross_vaild(8)
+    # for train_sample,test_sample in pathRandom:
+    #     train_dataset = gyroDataLoad(train_sample)
+    #     test_dataset = gyroDataLoad(test_sample)
+    #     dataLoad = DataLoader(train_dataset, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
+    #     testLoad = DataLoader(test_dataset, batch_size=1, num_workers=1)
+    #     # model = cnn()
+    #     # model = MyModel(2,128,1)
+    #
+    #     # model = mergeModel()
+    #
+    #     # model.apply(weight_init)
+    #
+    #     model = onlyGyro()
+    #     for name, parameters in model.named_parameters():
+    #         print(name, ':', parameters.size())
+    #
+    #     # attentionParam = list(map(id,model.attention.parameters()))
+    #     # mainParams = filter(lambda p: id(p) not in attentionParam,
+    #     #                         model.parameters())
+    #
+    #     criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    #     # optimizer = optim.Adam([{'params':model.attention.parameters(), 'lr':lrAttention},{'params':mainParams,'lr':lrMain}])
+    #     optimizer = optim.Adam(model.parameters(), lr=lrMain)
+    #     # train(model, criteria, epoch, dataLoad, device, optimizer, testLoad)
+    #     train_gyro(model,criteria,epoch,dataLoad,device,optimizer,testLoad)
