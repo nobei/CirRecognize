@@ -5,6 +5,7 @@ from torch import nn
 from Model.ModelCir import CirModel
 from Model.attention import attention
 from Model.gyroModel import lstmModel
+from Model.ultraGloves import ultraGloves
 from Parament import nclass
 import torch.nn.functional as F
 import torch
@@ -84,5 +85,19 @@ class onlyGyro(nn.Module):
         # b, c, h, w = out.size()
         # out = self.attention(out)
         # out = out.reshape(b, -1)
+        outClass = self.linear(out)
+        return F.log_softmax(outClass, dim=1)
+
+
+class ultraGlovesModel(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.cnn = ultraGloves()
+        self.linear = nn.Linear(2816, nclass)
+        self.attention = attention()
+
+    def forward(self, input):
+        out = self.cnn(input)
         outClass = self.linear(out)
         return F.log_softmax(outClass, dim=1)

@@ -2,7 +2,7 @@ import os
 import re
 
 if __name__ == '__main__':
-    dirPath = "E:/java/saveDataFromClient/src/audio/upDown/"
+    dirPath = "C:/Users/hao/Desktop/jiangyi/push"
     for file in os.listdir(dirPath):
         time = re.match(r'[0-9]*', file, re.M | re.I)[0]
         typeName = time+'.*'

@@ -1,10 +1,10 @@
-dataPath = "C:/Users/hao/Desktop/save6-2.txt"
+dataPath = "C:/Users/hao/Desktop/save10-27.txt"
 threshold = 8 #抖动极限
 confusionShowStep = 20 #每50步输出混淆矩阵
-batchSize = 128
-epoch = 100
+batchSize = 32
+epoch = 500
 nclass = 7
-splitRatio = 0.7
+splitRatio = 0.5
 lrAttention = 0.005
 lrMain = 0.00001
 avgNum = 5  #初始平均取值个数

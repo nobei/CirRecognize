@@ -10,7 +10,7 @@ import torch.nn as nn
 import numpy as np
 
 from Model.ModelCir import CirModel
-from Model.mergeModel import mergeModel, softVoteMerge, onlyAudio, onlyGyro
+from Model.mergeModel import mergeModel, softVoteMerge, onlyAudio, onlyGyro, ultraGloves, ultraGlovesModel
 from process.cirDataLoad import cirDataLoad
 from process.gyroDataLoad import gyroDataLoad
 from process.test_data_process import testData
@@ -280,26 +280,26 @@ if __name__ == '__main__':
 
 
 
-    train_set = testData(train_dataset)
-    test_set = testData(test_dataset)
-    trainLoad = DataLoader(train_set, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
-    testLoad = DataLoader(test_set)
-    criteria = torch.nn.CrossEntropyLoss(reduction='mean')
-    model = mergeModel()
-    criteria = torch.nn.CrossEntropyLoss(reduction='mean')
-    optimizer = optim.Adam(model.parameters(), lr=lrMain)
-    train(model, criteria, epoch, trainLoad, device, optimizer, testLoad)
-
-
-    # train_set = cirDataLoad(train_dataset)
-    # test_set = cirDataLoad(test_dataset)
+    # train_set = testData(train_dataset)
+    # test_set = testData(test_dataset)
     # trainLoad = DataLoader(train_set, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
     # testLoad = DataLoader(test_set)
     # criteria = torch.nn.CrossEntropyLoss(reduction='mean')
-    # model = onlyAudio()
+    # model = mergeModel()
     # criteria = torch.nn.CrossEntropyLoss(reduction='mean')
     # optimizer = optim.Adam(model.parameters(), lr=lrMain)
-    # train_gyroOrCir(model, criteria, epoch, trainLoad, device, optimizer, testLoad)
+    # train(model, criteria, epoch, trainLoad, device, optimizer, testLoad)
+
+
+    train_set = cirDataLoad(train_dataset)
+    test_set = cirDataLoad(test_dataset)
+    trainLoad = DataLoader(train_set, batch_size=batchSize, num_workers=8, shuffle=True, pin_memory=True)
+    testLoad = DataLoader(test_set)
+    criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    model = ultraGlovesModel()
+    criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+    optimizer = optim.Adam(model.parameters(), lr=lrMain)
+    train_gyroOrCir(model, criteria, epoch, trainLoad, device, optimizer, testLoad)
 
 
 
